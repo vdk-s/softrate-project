@@ -1,0 +1,14 @@
+{
+  "name": "softrate-platform",
+  "version": "1.0.0",
+  "description": "Softrate MERN Technology Blog Platform (Zoho Corporate Design System)",
+  "scripts": {
+    "server": "cd server && node server.js",
+    "seed": "cd server && node seed.js",
+    "client": "cd client && npm run dev",
+    "build:client": "cd client && npm run build"
+  },
+  "keywords": ["mern", "blog", "zoho-style", "react", "nodejs", "mongodb"],
+  "author": "Softrate Technologies"
+}
+
