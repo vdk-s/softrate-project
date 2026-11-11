@@ -138,6 +138,43 @@ export const api = {
     return parseResponse(res, 'Unauthorized');
   },
 
+  // Authors
+  async getAuthors() {
+    try {
+      const res = await fetch(`${API_BASE}/authors`);
+      return await parseResponse(res, 'Failed to fetch authors');
+    } catch (e) {
+      console.warn('Authors API fetch error:', e.message);
+      return [];
+    }
+  },
+
+  async createAuthor(authorData) {
+    const res = await fetch(`${API_BASE}/authors`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(authorData),
+    });
+    return parseResponse(res, 'Failed to create author');
+  },
+
+  async updateAuthor(id, authorData) {
+    const res = await fetch(`${API_BASE}/authors/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(authorData),
+    });
+    return parseResponse(res, 'Failed to update author');
+  },
+
+  async deleteAuthor(id) {
+    const res = await fetch(`${API_BASE}/authors/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return parseResponse(res, 'Failed to delete author');
+  },
+
   // Analytics & Dashboard Stats
   async getDashboardStats() {
     const res = await fetch(`${API_BASE}/stats/dashboard`, {

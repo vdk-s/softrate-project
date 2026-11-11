@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Clock, Calendar, Eye, ChevronLeft, ChevronRight, User, Tag, ArrowLeft } from 'lucide-react';
+import { Clock, Calendar, Eye, ChevronLeft, ChevronRight, User, Tag, ArrowLeft, Edit } from 'lucide-react';
 import PlaceholderThumbnail from '../components/PlaceholderThumbnail';
 import TOC from '../components/TOC';
 import ShareButtons from '../components/ShareButtons';
@@ -124,6 +124,7 @@ export default function BlogDetailPage() {
 
   const categoryName = post.category?.name || 'General';
   const accentColor = post.category?.accentColor || '#e42525';
+  const isAdmin = Boolean(localStorage.getItem('softrate_token'));
   const formattedDate = new Date(post.publishedAt || post.createdAt).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -152,17 +153,40 @@ export default function BlogDetailPage() {
 
         {/* Article Header */}
         <header className="detail-header">
-          <Link
-            to={`/category/${post.category?.slug}`}
-            className="category-badge"
-            style={{
-              backgroundColor: `${accentColor}14`,
-              color: accentColor,
-              border: `1px solid ${accentColor}28`,
-            }}
-          >
-            {categoryName}
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Link
+              to={`/category/${post.category?.slug}`}
+              className="category-badge"
+              style={{
+                backgroundColor: `${accentColor}14`,
+                color: accentColor,
+                border: `1px solid ${accentColor}28`,
+                marginBottom: 0,
+              }}
+            >
+              {categoryName}
+            </Link>
+
+            {isAdmin && (
+              <Link
+                to={`/admin/editor/${post._id}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 14px',
+                  backgroundColor: '#0f172a',
+                  color: '#ffffff',
+                  borderRadius: 4,
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <Edit size={13} /> Edit Publication (Admin)
+              </Link>
+            )}
+          </div>
 
           <h1 className="detail-title">{post.title}</h1>
 

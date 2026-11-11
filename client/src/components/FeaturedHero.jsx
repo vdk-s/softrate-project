@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Calendar, User, ArrowRight } from 'lucide-react';
+import { Clock, Calendar, User, ArrowRight, Edit } from 'lucide-react';
 import PlaceholderThumbnail from './PlaceholderThumbnail';
 
 export default function FeaturedHero({ featuredPosts = [] }) {
   const navigate = useNavigate();
+  const isAdmin = Boolean(localStorage.getItem('softrate_token'));
 
   if (!featuredPosts || featuredPosts.length === 0) return null;
 
@@ -31,7 +32,35 @@ export default function FeaturedHero({ featuredPosts = [] }) {
             role="button"
             tabIndex={0}
           >
-            <div className="main-featured-thumb">
+            <div className="main-featured-thumb" style={{ position: 'relative' }}>
+              {isAdmin && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/admin/editor/${mainPost._id}`);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    zIndex: 10,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '5px 12px',
+                    backgroundColor: '#0f172a',
+                    color: '#ffffff',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    borderRadius: 4,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                    cursor: 'pointer',
+                  }}
+                  title="Edit Featured Article"
+                >
+                  <Edit size={12} /> Edit
+                </button>
+              )}
               <PlaceholderThumbnail
                 title={mainPost.title}
                 categoryName={mainPost.category?.name || 'Featured'}

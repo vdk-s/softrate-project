@@ -7,11 +7,21 @@ import BlogCard from '../components/BlogCard';
 import NewsletterBar from '../components/NewsletterBar';
 import { api } from '../services/api';
 
+const DEFAULT_CATEGORIES = [
+  { _id: 'cat-soft-dev', name: 'Software Development', slug: 'software-development', accentColor: '#0f62fe' },
+  { _id: 'cat-aiml', name: 'Artificial Intelligence & Machine Learning', slug: 'artificial-intelligence-machine-learning', accentColor: '#8a3ffc' },
+  { _id: 'cat-web-mobile', name: 'Web and Mobile App Development', slug: 'web-mobile-app-development', accentColor: '#0072c3' },
+  { _id: 'cat-tech-inno', name: 'Technology & Innovation', slug: 'technology-innovation', accentColor: '#ff832b' },
+  { _id: 'cat-cyber', name: 'Cybersecurity', slug: 'cybersecurity', accentColor: '#da1e28' },
+  { _id: 'cat-cloud', name: 'Cloud Computing', slug: 'cloud-computing', accentColor: '#1192e8' },
+  { _id: 'cat-industry', name: 'Industry Insights', slug: 'industry-insights', accentColor: '#198038' },
+];
+
 export default function HomePage() {
   const [featuredPosts, setFeaturedPosts] = useState([]);
   const [trendingPosts, setTrendingPosts] = useState([]);
   const [latestPosts, setLatestPosts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
 

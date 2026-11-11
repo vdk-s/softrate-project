@@ -1,11 +1,21 @@
+const mongoose = require('mongoose');
 const Author = require('../models/Author');
 const Post = require('../models/Post');
+const store = require('../data/store');
+
+const isDbConnected = () => mongoose.connection.readyState === 1;
 
 exports.getAuthors = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      return res.json(store.getAuthors());
+    }
+
     const authors = await Author.find().sort({ name: 1 });
-    
-    // Attach published posts count for each author
+    if (authors.length === 0) {
+      return res.json(store.getAuthors());
+    }
+
     const authorsWithCount = await Promise.all(
       authors.map(async (author) => {
         const count = await Post.countDocuments({
@@ -24,7 +34,29 @@ exports.getAuthors = async (req, res) => {
 
     res.json(authorsWithCount);
   } catch (error) {
-    res.status(500).json({ message: 'Error retrieving authors', error: error.message });
+    res.json(store.getAuthors());
+  }
+};
+
+exports.getAuthorById = async (req, res) => {
+  try {
+    if (!isDbConnected()) {
+      const a = store.getAuthorById(req.params.id);
+      if (!a) return res.status(404).json({ message: 'Author not found' });
+      return res.json(a);
+    }
+
+    const author = await Author.findById(req.params.id);
+    if (!author) {
+      const a = store.getAuthorById(req.params.id);
+      if (a) return res.json(a);
+      return res.status(404).json({ message: 'Author not found' });
+    }
+    res.json(author);
+  } catch (error) {
+    const a = store.getAuthorById(req.params.id);
+    if (a) return res.json(a);
+    res.status(500).json({ message: 'Error retrieving author', error: error.message });
   }
 };
 
@@ -33,6 +65,11 @@ exports.createAuthor = async (req, res) => {
     const { name, role, avatar, bio } = req.body;
     if (!name) {
       return res.status(400).json({ message: 'Author name is required' });
+    }
+
+    if (!isDbConnected()) {
+      const newAuth = store.createAuthor(req.body);
+      return res.status(201).json(newAuth);
     }
 
     const author = await Author.create({
@@ -50,6 +87,12 @@ exports.createAuthor = async (req, res) => {
 
 exports.updateAuthor = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      const updated = store.updateAuthor(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ message: 'Author not found' });
+      return res.json(updated);
+    }
+
     const { name, role, avatar, bio } = req.body;
     const author = await Author.findById(req.params.id);
     if (!author) {
@@ -70,6 +113,11 @@ exports.updateAuthor = async (req, res) => {
 
 exports.deleteAuthor = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      store.deleteAuthor(req.params.id);
+      return res.json({ message: 'Author deleted successfully' });
+    }
+
     const author = await Author.findByIdAndDelete(req.params.id);
     if (!author) {
       return res.status(404).json({ message: 'Author not found' });
@@ -79,4 +127,3 @@ exports.deleteAuthor = async (req, res) => {
     res.status(500).json({ message: 'Error deleting author', error: error.message });
   }
 };
-

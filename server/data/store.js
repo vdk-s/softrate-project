@@ -5,6 +5,16 @@ const jwt = require('jsonwebtoken');
 let categories = [...categoriesData];
 let posts = [...articlesData];
 
+let authors = [
+  { _id: 'auth-1', name: 'Sai Teja Erukude', role: 'Cybersecurity Research Fellow', avatar: '', bio: 'Specialist in adversarial machine learning and polymorphic threat telemetry.' },
+  { _id: 'auth-2', name: 'Mekhala Egodawele', role: 'Enterprise Strategy Fellow', avatar: '', bio: 'Principal investigator analyzing digital business transformation paradigms.' },
+  { _id: 'auth-3', name: 'Shuiguang Deng', role: 'Distinguished Cloud Architect', avatar: '', bio: 'IEEE Fellow researching service-oriented computing and cloud-native systems.' },
+  { _id: 'auth-4', name: 'Petr Průcha', role: 'Automation & ESG Researcher', avatar: '', bio: 'Technical University of Liberec researcher focusing on robotic process automation.' },
+  { _id: 'auth-5', name: 'Shehab Eldeen Ayman Mounir', role: 'Mobile Systems Engineer', avatar: '', bio: 'British University in Egypt software engineer specializing in cross-platform mobile frameworks.' },
+  { _id: 'auth-6', name: 'Yuhan Zhou', role: 'DataOps & AI Researcher', avatar: '', bio: 'University of North Texas data quality and machine learning benchmark researcher.' },
+  { _id: 'auth-7', name: 'Sebastian Baltes', role: 'Software Engineering Researcher', avatar: '', bio: 'University of Trier empirical software engineering researcher focusing on developer expertise.' },
+];
+
 const JWT_SECRET = process.env.JWT_SECRET || 'softrate_super_secret_jwt_key_2026';
 
 const store = {
@@ -175,8 +185,50 @@ const store = {
       draftPosts: drafts,
       totalViews,
       totalCategories: categories.length,
+      totalAuthors: authors.length,
       recentPosts: posts.slice(0, 5),
     };
+  },
+
+  // Authors
+  getAuthors() {
+    return authors.map((auth) => {
+      const postCount = posts.filter(
+        (p) => p.author?.toLowerCase().includes(auth.name.toLowerCase())
+      ).length;
+      return { ...auth, postCount };
+    });
+  },
+
+  getAuthorById(id) {
+    return authors.find((a) => a._id === id);
+  },
+
+  createAuthor(data) {
+    const newAuthor = {
+      _id: `auth-${Date.now()}`,
+      name: data.name,
+      role: data.role || 'Technical Researcher',
+      avatar: data.avatar || '',
+      bio: data.bio || '',
+      postCount: 0,
+    };
+    authors.push(newAuthor);
+    return newAuthor;
+  },
+
+  updateAuthor(id, data) {
+    const index = authors.findIndex((a) => a._id === id);
+    if (index === -1) return null;
+    authors[index] = { ...authors[index], ...data };
+    return authors[index];
+  },
+
+  deleteAuthor(id) {
+    const index = authors.findIndex((a) => a._id === id);
+    if (index === -1) return false;
+    authors.splice(index, 1);
+    return true;
   },
 
   // Authentication
@@ -205,3 +257,4 @@ const store = {
 };
 
 module.exports = store;
+

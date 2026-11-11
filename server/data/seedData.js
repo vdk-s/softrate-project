@@ -394,3 +394,4 @@ Eliminate superficial metrics (raw commit counts, lines of code) which trigger G
 ];
 
 module.exports = { categoriesData, articlesData };
+

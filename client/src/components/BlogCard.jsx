@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Calendar, ArrowRight, User } from 'lucide-react';
+import { Clock, Calendar, ArrowRight, User, Edit } from 'lucide-react';
 import PlaceholderThumbnail from './PlaceholderThumbnail';
 
 export default function BlogCard({ post }) {
   const navigate = useNavigate();
+  const isAdmin = Boolean(localStorage.getItem('softrate_token'));
 
   const handleCardClick = () => {
     navigate(`/blog/${post.slug}`);
@@ -24,7 +25,35 @@ export default function BlogCard({ post }) {
   return (
     <article className="blog-card" onClick={handleCardClick} role="button" tabIndex={0}>
       {/* Modern Visual Placeholder Thumbnail */}
-      <div className="blog-card-thumb">
+      <div className="blog-card-thumb" style={{ position: 'relative' }}>
+        {isAdmin && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/admin/editor/${post._id}`);
+            }}
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              zIndex: 10,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '5px 10px',
+              backgroundColor: '#0f172a',
+              color: '#ffffff',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              borderRadius: 4,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+              cursor: 'pointer',
+            }}
+            title="Edit Article (Admin Privilege)"
+          >
+            <Edit size={12} /> Edit
+          </button>
+        )}
         <PlaceholderThumbnail
           title={post.title}
           categoryName={categoryName}

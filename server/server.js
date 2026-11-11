@@ -12,6 +12,7 @@ const postRoutes = require('./routes/postRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const seoRoutes = require('./routes/seoRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
+const authorRoutes = require('./routes/authorRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -54,6 +55,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/authors', authorRoutes);
 
 // Dynamic SEO Routes (sitemap.xml, robots.txt)
 app.use('/', seoRoutes);

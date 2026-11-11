@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Shield, LogOut, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { Search, Shield, LogOut, LayoutDashboard, Plus, ChevronRight } from 'lucide-react';
 import SoftrateLogo from './SoftrateLogo';
 import SearchModal from './SearchModal';
 import { api } from '../services/api';
 
+const DEFAULT_CATEGORIES = [
+  { _id: 'cat-soft-dev', name: 'Software Development', slug: 'software-development' },
+  { _id: 'cat-aiml', name: 'Artificial Intelligence & Machine Learning', slug: 'artificial-intelligence-machine-learning' },
+  { _id: 'cat-web-mobile', name: 'Web and Mobile App Development', slug: 'web-mobile-app-development' },
+  { _id: 'cat-tech-inno', name: 'Technology & Innovation', slug: 'technology-innovation' },
+  { _id: 'cat-cyber', name: 'Cybersecurity', slug: 'cybersecurity' },
+  { _id: 'cat-cloud', name: 'Cloud Computing', slug: 'cloud-computing' },
+  { _id: 'cat-industry', name: 'Industry Insights', slug: 'industry-insights' },
+];
+
 export default function Header() {
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const location = useLocation();
@@ -79,26 +89,65 @@ export default function Header() {
                 <span className="search-shortcut-badge">⌘K</span>
               </button>
 
-              {/* Admin Portal Shortcut */}
+              {/* Admin Portal Shortcuts */}
               {currentUser ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Link
                     to="/admin"
                     className="admin-nav-btn"
-                    style={{ backgroundColor: '#1e293b' }}
+                    style={{ backgroundColor: '#0f172a' }}
+                    title="CMS Dashboard"
                   >
-                    <LayoutDashboard size={15} />
-                    <span>Dashboard</span>
+                    <LayoutDashboard size={14} />
+                    <span>CMS</span>
                   </Link>
+
+                  <Link
+                    to="/admin/editor"
+                    className="admin-nav-btn"
+                    style={{ backgroundColor: '#e42525' }}
+                    title="Create new article"
+                  >
+                    <Plus size={14} />
+                    <span>New Post</span>
+                  </Link>
+
+                  <Link
+                    to="/admin/categories"
+                    style={{
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      color: '#475569',
+                      padding: '6px 8px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Categories
+                  </Link>
+
+                  <Link
+                    to="/admin/authors"
+                    style={{
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      color: '#475569',
+                      padding: '6px 8px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Authors
+                  </Link>
+
                   <button
                     onClick={handleLogout}
                     title="Sign Out"
                     style={{
-                      padding: '8px 10px',
-                      color: '#64748b',
+                      padding: '6px 8px',
+                      color: '#94a3b8',
                       borderRadius: 4,
                       display: 'flex',
                       alignItems: 'center',
+                      cursor: 'pointer',
                     }}
                   >
                     <LogOut size={16} />
@@ -107,7 +156,7 @@ export default function Header() {
               ) : (
                 <Link to="/admin/login" className="admin-nav-btn">
                   <Shield size={14} />
-                  <span>Admin</span>
+                  <span>Admin Login</span>
                 </Link>
               )}
             </div>

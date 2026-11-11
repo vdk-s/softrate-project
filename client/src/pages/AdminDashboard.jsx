@@ -13,6 +13,7 @@ import {
   Search,
   AlertCircle,
   TrendingUp,
+  Users,
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -69,6 +70,18 @@ export default function AdminDashboard() {
       setStats(statsData);
     } catch (err) {
       alert(err.message || 'Failed to delete article');
+    }
+  };
+
+  const handleStatusToggle = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'published' ? 'draft' : 'published';
+    try {
+      await api.updatePost(id, { status: newStatus });
+      setPosts((prev) =>
+        prev.map((p) => (p._id === id ? { ...p, status: newStatus } : p))
+      );
+    } catch (err) {
+      alert(err.message || 'Failed to update article status');
     }
   };
 
@@ -151,7 +164,23 @@ export default function AdminDashboard() {
               fontSize: '0.9rem',
             }}
           >
-            <FolderPlus size={16} /> Manage Categories
+            <FolderPlus size={16} /> Categories
+          </Link>
+          <Link
+            to="/admin/authors"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 18px',
+              backgroundColor: '#1e293b',
+              color: '#ffffff',
+              borderRadius: 4,
+              fontWeight: 600,
+              fontSize: '0.9rem',
+            }}
+          >
+            <Users size={16} /> Authors
           </Link>
           <Link
             to="/"
@@ -369,13 +398,17 @@ export default function AdminDashboard() {
                     {post.author}
                   </td>
                   <td style={{ padding: '14px 16px' }}>
-                    <span
+                    <button
+                      onClick={() => handleStatusToggle(post._id, post.status)}
+                      title="Click to toggle Published / Draft"
                       style={{
-                        display: 'inline-block',
-                        padding: '3px 8px',
+                        padding: '4px 10px',
                         borderRadius: 12,
                         fontSize: '0.74rem',
                         fontWeight: 600,
+                        cursor: 'pointer',
+                        border: 'none',
+                        transition: 'opacity 0.2s',
                         backgroundColor:
                           post.status === 'published'
                             ? '#dcfce7'
@@ -390,8 +423,8 @@ export default function AdminDashboard() {
                             : '#0369a1',
                       }}
                     >
-                      {post.status.toUpperCase()}
-                    </span>
+                      {post.status.toUpperCase()} ⟳
+                    </button>
                   </td>
                   <td style={{ padding: '14px 16px', color: '#64748b' }}>
                     {post.views || 0}

@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminEditor from './pages/AdminEditor';
 import CategoryManagePage from './pages/CategoryManagePage';
+import AuthorManagePage from './pages/AuthorManagePage';
 import './styles/ZohoTheme.css';
 import './index.css';
 
@@ -34,6 +35,7 @@ function AppLayout() {
           <Route path="/admin/editor" element={<AdminEditor />} />
           <Route path="/admin/editor/:id" element={<AdminEditor />} />
           <Route path="/admin/categories" element={<CategoryManagePage />} />
+          <Route path="/admin/authors" element={<AuthorManagePage />} />
         </Routes>
       </div>
       <Footer />
