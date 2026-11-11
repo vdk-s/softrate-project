@@ -6,6 +6,10 @@ const fs = require('fs');
 let mongod = null;
 
 const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+
   // If MONGO_URI is explicitly provided in env, connect to it
   if (process.env.MONGO_URI && process.env.MONGO_URI !== 'mongodb://127.0.0.1:27017/softrate') {
     try {

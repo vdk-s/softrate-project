@@ -27,6 +27,17 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Database Connection Middleware for Serverless & Direct Requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('[DB Middleware Error]:', err);
+    next();
+  }
+});
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({
@@ -88,4 +99,10 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// Start Server locally or when not invoked in Vercel serverless environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  startServer();
+}
+
+// Export Express application instance for Vercel Serverless
+module.exports = app;
