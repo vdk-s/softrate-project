@@ -5,6 +5,9 @@ const fs = require('fs');
 
 let mongod = null;
 
+// Disable command buffering so queries fail immediately or fallback to store instead of hanging for 10s
+mongoose.set('bufferCommands', false);
+
 const connectDB = async () => {
   if (mongoose.connection.readyState === 1) {
     return;
@@ -13,12 +16,20 @@ const connectDB = async () => {
   // If MONGO_URI is explicitly provided in env, connect to it
   if (process.env.MONGO_URI && process.env.MONGO_URI !== 'mongodb://127.0.0.1:27017/softrate') {
     try {
-      await mongoose.connect(process.env.MONGO_URI);
+      await mongoose.connect(process.env.MONGO_URI, {
+        serverSelectionTimeoutMS: 5000,
+      });
       console.log(`[MongoDB] Connected to external MongoDB at ${process.env.MONGO_URI}`);
       return;
     } catch (err) {
       console.log('[MongoDB] External URI failed, falling back to embedded database...');
     }
+  }
+
+  // In Vercel serverless environment without external MONGO_URI, use fast in-memory store
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    console.log('[MongoDB] Serverless environment detected without MONGO_URI. Using fast in-memory data store.');
+    return;
   }
 
   // Fast embedded MongoDB engine with local persistence

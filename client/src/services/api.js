@@ -8,18 +8,38 @@ const getAuthHeaders = () => {
   };
 };
 
+const parseResponse = async (res, defaultErrMsg = 'Request failed') => {
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok) {
+    const errorMsg = data?.message || (typeof text === 'string' && text.length < 120 ? text : defaultErrMsg);
+    throw new Error(errorMsg);
+  }
+
+  return data || {};
+};
+
 export const api = {
   // Categories
   async getCategories() {
-    const res = await fetch(`${API_BASE}/categories`);
-    if (!res.ok) throw new Error('Failed to fetch categories');
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/categories`);
+      return await parseResponse(res, 'Failed to fetch categories');
+    } catch (e) {
+      console.warn('Categories API fetch error, returning empty list:', e.message);
+      return [];
+    }
   },
 
   async getCategoryBySlug(slug) {
     const res = await fetch(`${API_BASE}/categories/${slug}`);
-    if (!res.ok) throw new Error('Category not found');
-    return res.json();
+    return parseResponse(res, 'Category not found');
   },
 
   async createCategory(categoryData) {
@@ -28,44 +48,51 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify(categoryData),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Failed to create category');
-    }
-    return res.json();
+    return parseResponse(res, 'Failed to create category');
   },
 
   // Posts
   async getPosts({ category, search, tag, page = 1, limit = 9, status = 'published' } = {}) {
-    const params = new URLSearchParams();
-    if (category) params.append('category', category);
-    if (search) params.append('search', search);
-    if (tag) params.append('tag', tag);
-    if (page) params.append('page', page);
-    if (limit) params.append('limit', limit);
-    if (status) params.append('status', status);
+    try {
+      const params = new URLSearchParams();
+      if (category) params.append('category', category);
+      if (search) params.append('search', search);
+      if (tag) params.append('tag', tag);
+      if (page) params.append('page', page);
+      if (limit) params.append('limit', limit);
+      if (status) params.append('status', status);
 
-    const res = await fetch(`${API_BASE}/posts?${params.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch posts');
-    return res.json();
+      const res = await fetch(`${API_BASE}/posts?${params.toString()}`);
+      return await parseResponse(res, 'Failed to fetch posts');
+    } catch (e) {
+      console.warn('Posts API fetch error:', e.message);
+      return { posts: [], totalPosts: 0, totalPages: 1, currentPage: 1 };
+    }
   },
 
   async getFeaturedPosts() {
-    const res = await fetch(`${API_BASE}/posts/featured`);
-    if (!res.ok) throw new Error('Failed to fetch featured posts');
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/posts/featured`);
+      return await parseResponse(res, 'Failed to fetch featured posts');
+    } catch (e) {
+      console.warn('Featured posts API error:', e.message);
+      return [];
+    }
   },
 
   async getTrendingPosts() {
-    const res = await fetch(`${API_BASE}/posts/trending`);
-    if (!res.ok) throw new Error('Failed to fetch trending posts');
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/posts/trending`);
+      return await parseResponse(res, 'Failed to fetch trending posts');
+    } catch (e) {
+      console.warn('Trending posts API error:', e.message);
+      return [];
+    }
   },
 
   async getPostBySlug(slug) {
     const res = await fetch(`${API_BASE}/posts/${slug}`);
-    if (!res.ok) throw new Error('Article not found');
-    return res.json();
+    return parseResponse(res, 'Article not found');
   },
 
   async createPost(postData) {
@@ -74,11 +101,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify(postData),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Failed to create post');
-    }
-    return res.json();
+    return parseResponse(res, 'Failed to create post');
   },
 
   async updatePost(id, postData) {
@@ -87,11 +110,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify(postData),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Failed to update post');
-    }
-    return res.json();
+    return parseResponse(res, 'Failed to update post');
   },
 
   async deletePost(id) {
@@ -99,11 +118,7 @@ export const api = {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Failed to delete post');
-    }
-    return res.json();
+    return parseResponse(res, 'Failed to delete post');
   },
 
   // Auth
@@ -113,19 +128,14 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Authentication failed');
-    }
-    return res.json();
+    return parseResponse(res, 'Invalid credentials');
   },
 
   async getMe() {
     const res = await fetch(`${API_BASE}/auth/me`, {
       headers: getAuthHeaders(),
     });
-    if (!res.ok) throw new Error('Unauthorized');
-    return res.json();
+    return parseResponse(res, 'Unauthorized');
   },
 
   // Analytics & Dashboard Stats
@@ -133,8 +143,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/stats/dashboard`, {
       headers: getAuthHeaders(),
     });
-    if (!res.ok) throw new Error('Failed to fetch analytics');
-    return res.json();
+    return parseResponse(res, 'Failed to fetch analytics');
   },
 
   // Newsletter
@@ -144,11 +153,6 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Subscription failed');
-    }
-    return res.json();
+    return parseResponse(res, 'Subscription failed');
   },
 };
-

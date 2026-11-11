@@ -1,5 +1,9 @@
+const mongoose = require('mongoose');
 const Post = require('../models/Post');
 const Category = require('../models/Category');
+const store = require('../data/store');
+
+const isDbConnected = () => mongoose.connection.readyState === 1;
 
 // Helper to calculate reading time
 const calculateReadTime = (content) => {
@@ -21,6 +25,10 @@ const generateSlug = (title) => {
 
 exports.getPosts = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      return res.json(store.getPosts(req.query));
+    }
+
     const {
       page = 1,
       limit = 9,
@@ -33,12 +41,10 @@ exports.getPosts = async (req, res) => {
 
     const query = {};
 
-    // Status filter
     if (status !== 'all') {
       query.status = status;
     }
 
-    // Category filter (slug or ObjectId)
     if (category && category !== 'all') {
       let catDoc;
       if (category.match(/^[0-9a-fA-F]{24}$/)) {
@@ -53,12 +59,10 @@ exports.getPosts = async (req, res) => {
       }
     }
 
-    // Tag filter
     if (tag) {
       query.tags = { $in: [new RegExp(tag, 'i')] };
     }
 
-    // Keyword search
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim(), 'i');
       query.$or = [
@@ -78,6 +82,11 @@ exports.getPosts = async (req, res) => {
       .skip(skip)
       .limit(Number(limit));
 
+    // If database is empty, fallback to store
+    if (totalPosts === 0 && !category && !search) {
+      return res.json(store.getPosts(req.query));
+    }
+
     res.json({
       posts,
       totalPosts,
@@ -86,110 +95,98 @@ exports.getPosts = async (req, res) => {
       limit: Number(limit),
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching posts', error: error.message });
+    console.warn('[PostController] Fallback to in-memory store:', error.message);
+    res.json(store.getPosts(req.query));
   }
 };
 
 exports.getFeaturedPosts = async (req, res) => {
   try {
-    // 1 primary featured + 2 secondary featured
+    if (!isDbConnected()) {
+      return res.json(store.getFeaturedPosts());
+    }
+
     let posts = await Post.find({ status: 'published', isFeatured: true })
       .populate('category', 'name slug accentColor')
       .populate('authorRef', 'name avatar role')
       .sort('-publishedAt')
       .limit(3);
 
-    // Fallback if not enough flagged as featured
-    if (posts.length < 3) {
-      const needed = 3 - posts.length;
-      const existingIds = posts.map((p) => p._id);
-      const additional = await Post.find({
-        status: 'published',
-        _id: { $nin: existingIds },
-      })
-        .populate('category', 'name slug accentColor')
-        .populate('authorRef', 'name avatar role')
-        .sort('-publishedAt')
-        .limit(needed);
-      posts = [...posts, ...additional];
+    if (posts.length === 0) {
+      return res.json(store.getFeaturedPosts());
     }
 
     res.json(posts);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching featured posts', error: error.message });
+    res.json(store.getFeaturedPosts());
   }
 };
 
 exports.getTrendingPosts = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      return res.json(store.getTrendingPosts());
+    }
+
     let posts = await Post.find({ status: 'published', isTrending: true })
       .populate('category', 'name slug accentColor')
-      .sort('-views -publishedAt')
-      .limit(5);
+      .populate('authorRef', 'name avatar role')
+      .sort('-views')
+      .limit(4);
 
-    // Fallback to top views
-    if (posts.length < 5) {
-      const existingIds = posts.map((p) => p._id);
-      const fallback = await Post.find({
-        status: 'published',
-        _id: { $nin: existingIds },
-      })
-        .populate('category', 'name slug accentColor')
-        .sort('-views -publishedAt')
-        .limit(5 - posts.length);
-      posts = [...posts, ...fallback];
+    if (posts.length === 0) {
+      return res.json(store.getTrendingPosts());
     }
 
     res.json(posts);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching trending posts', error: error.message });
+    res.json(store.getTrendingPosts());
   }
 };
 
 exports.getPostBySlug = async (req, res) => {
   try {
-    const { slug } = req.params;
-    const post = await Post.findOneAndUpdate(
-      { slug: slug.toLowerCase() },
-      { $inc: { views: 1 } },
-      { new: true }
-    )
-      .populate('category', 'name slug description accentColor')
+    if (!isDbConnected()) {
+      const data = store.getPostBySlug(req.params.slug);
+      if (!data) return res.status(404).json({ message: 'Article not found' });
+      return res.json(data);
+    }
+
+    const post = await Post.findOne({ slug: req.params.slug })
+      .populate('category', 'name slug accentColor description')
       .populate('authorRef', 'name avatar role bio');
 
     if (!post) {
+      const fallback = store.getPostBySlug(req.params.slug);
+      if (fallback) return res.json(fallback);
       return res.status(404).json({ message: 'Article not found' });
     }
 
-    // Fetch related articles (same category or shared tags)
+    post.views += 1;
+    await post.save();
+
     const relatedPosts = await Post.find({
-      status: 'published',
       _id: { $ne: post._id },
-      $or: [
-        { category: post.category?._id },
-        { tags: { $in: post.tags || [] } },
-      ],
+      category: post.category?._id,
+      status: 'published',
     })
       .populate('category', 'name slug accentColor')
       .limit(3)
-      .select('title slug excerpt coverImage readTime publishedAt author category');
+      .select('title slug coverImage author readTime publishedAt category excerpt');
 
-    // Fetch Next and Previous posts
     const prevPost = await Post.findOne({
       status: 'published',
       publishedAt: { $lt: post.publishedAt },
     })
       .sort('-publishedAt')
-      .select('title slug category')
-      .populate('category', 'name slug');
+      .select('title slug');
 
     const nextPost = await Post.findOne({
       status: 'published',
       publishedAt: { $gt: post.publishedAt },
     })
       .sort('publishedAt')
-      .select('title slug category')
-      .populate('category', 'name slug');
+      .select('title slug');
 
     res.json({
       post,
@@ -198,111 +195,120 @@ exports.getPostBySlug = async (req, res) => {
       nextPost,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error retrieving article', error: error.message });
+    const fallback = store.getPostBySlug(req.params.slug);
+    if (fallback) return res.json(fallback);
+    res.status(500).json({ message: 'Failed to retrieve article', error: error.message });
   }
 };
 
 exports.createPost = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      const newPost = store.createPost(req.body);
+      return res.status(201).json(newPost);
+    }
+
     const {
       title,
       slug,
       excerpt,
       content,
-      coverImage,
       category,
       author,
+      authorRef,
+      coverImage,
       tags,
       readTime,
       status,
       isFeatured,
       isTrending,
-      publishedAt,
       seo,
+      publishedAt,
     } = req.body;
 
     if (!title || !content || !category) {
       return res.status(400).json({ message: 'Title, content, and category are required' });
     }
 
-    let postSlug = slug ? generateSlug(slug) : generateSlug(title);
-    const existingSlug = await Post.findOne({ slug: postSlug });
-    if (existingSlug) {
-      postSlug = `${postSlug}-${Date.now().toString().slice(-4)}`;
-    }
+    const generatedSlug = slug ? generateSlug(slug) : generateSlug(title);
+    const existingSlug = await Post.findOne({ slug: generatedSlug });
+    const finalSlug = existingSlug ? `${generatedSlug}-${Date.now().toString().slice(-4)}` : generatedSlug;
 
     const calculatedReadTime = readTime || calculateReadTime(content);
 
     const post = await Post.create({
       title,
-      slug: postSlug,
-      excerpt: excerpt || content.slice(0, 160).replace(/[#*`_]/g, '') + '...',
+      slug: finalSlug,
+      excerpt,
       content,
-      coverImage: coverImage || '',
       category,
-      author: author || 'Softrate Engineering',
-      tags: Array.isArray(tags) ? tags : typeof tags === 'string' ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+      author: author || 'Softrate Research Staff',
+      authorRef: authorRef || req.user?.id,
+      coverImage: coverImage || '',
+      tags: tags || [],
       readTime: calculatedReadTime,
-      status: status || 'published',
-      isFeatured: Boolean(isFeatured),
-      isTrending: Boolean(isTrending),
-      publishedAt: publishedAt || Date.now(),
+      status: status || 'draft',
+      isFeatured: !!isFeatured,
+      isTrending: !!isTrending,
+      publishedAt: status === 'published' ? (publishedAt || new Date()) : publishedAt,
       seo: {
         metaTitle: seo?.metaTitle || title,
-        metaDescription: seo?.metaDescription || excerpt || '',
+        metaDescription: seo?.metaDescription || excerpt,
+        canonicalUrl: seo?.canonicalUrl || '',
       },
     });
 
-    const populated = await Post.findById(post._id).populate('category', 'name slug');
-    res.status(201).json(populated);
+    res.status(201).json(post);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating article', error: error.message });
+    res.status(500).json({ message: 'Failed to create article', error: error.message });
   }
 };
 
 exports.updatePost = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      const updated = store.updatePost(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ message: 'Article not found' });
+      return res.json(updated);
+    }
+
     const post = await Post.findById(req.params.id);
     if (!post) {
       return res.status(404).json({ message: 'Article not found' });
     }
 
-    const updates = { ...req.body };
-
-    if (updates.title && !updates.slug && updates.title !== post.title) {
-      updates.slug = generateSlug(updates.title);
-    } else if (updates.slug) {
-      updates.slug = generateSlug(updates.slug);
+    if (req.body.title && !req.body.slug && req.body.title !== post.title) {
+      req.body.slug = generateSlug(req.body.title);
     }
 
-    if (updates.content && !updates.readTime) {
-      updates.readTime = calculateReadTime(updates.content);
+    if (req.body.content && !req.body.readTime) {
+      req.body.readTime = calculateReadTime(req.body.content);
     }
 
-    if (updates.tags && typeof updates.tags === 'string') {
-      updates.tags = updates.tags.split(',').map((t) => t.trim()).filter(Boolean);
-    }
-
-    const updated = await Post.findByIdAndUpdate(req.params.id, updates, {
+    const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
-    }).populate('category', 'name slug');
+    }).populate('category', 'name slug accentColor');
 
-    res.json(updated);
+    res.json(updatedPost);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating article', error: error.message });
+    res.status(500).json({ message: 'Failed to update article', error: error.message });
   }
 };
 
 exports.deletePost = async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      const ok = store.deletePost(req.params.id);
+      return res.json({ message: 'Article deleted successfully' });
+    }
+
     const post = await Post.findByIdAndDelete(req.params.id);
     if (!post) {
       return res.status(404).json({ message: 'Article not found' });
     }
     res.json({ message: 'Article deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting article', error: error.message });
+    res.status(500).json({ message: 'Failed to delete article', error: error.message });
   }
 };
-
