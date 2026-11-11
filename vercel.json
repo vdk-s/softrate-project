@@ -18,6 +18,18 @@
       }
     },
     {
+      "source": "/sitemap.xml",
+      "destination": {
+        "service": "server"
+      }
+    },
+    {
+      "source": "/robots.txt",
+      "destination": {
+        "service": "server"
+      }
+    },
+    {
       "source": "/(.*)",
       "destination": {
         "service": "client"
