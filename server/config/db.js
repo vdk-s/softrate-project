@@ -67,8 +67,10 @@ const connectDB = async () => {
         await seedData();
       }
     } catch (innerErr) {
-      console.error('[MongoDB] Fatal MongoDB initialization error:', innerErr);
-      process.exit(1);
+      console.error('[MongoDB] Database connection error:', innerErr.message);
+      if (!process.env.VERCEL) {
+        process.exit(1);
+      }
     }
   }
 };
